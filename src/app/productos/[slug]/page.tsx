@@ -2,11 +2,10 @@
 
 import { getProductBySlug } from '@/app/actions/product/get-product.action';
 import Image from 'next/image';
-import Link from 'next/link';
 import { getAjustedPrice } from '@/utils/price'; // Asegúrate de que la ruta sea correcta
-import { formatPrice } from "@/utils/miles";
 import { useEffect, useState } from 'react';
 import { Product } from '@/app/types';
+import Link from 'next/link';
 
 
 // Prop types para Next.js 15
@@ -116,6 +115,28 @@ export default function ProductPage(props: Props) {
     );
   }
 
+  // --- FUNCIÓN DE FORMATO DE PRECIO MEJORADA ---
+  // Esta función asegura que se usen puntos para los miles.
+  const formatPriceWithDots = (price: number | string | undefined | null): string => {
+    const numericPrice = Number(price);
+    if (isNaN(numericPrice)) return '0';
+    // 'es-ES' usa puntos como separadores de miles.
+    return new Intl.NumberFormat('es-ES').format(numericPrice);
+  };
+
+  // --- LÓGICA DE PRECIO CENTRALIZADA ---
+  // Determinar el precio base (si está en oferta o no)
+  const basePrice = product.on_sale ? product.sale_price : (product.price || product.regular_price);
+  // Calcular el precio final ajustado
+  const finalPrice = getAjustedPrice(basePrice);
+
+  // --- DEBUG DE PRECIOS ---
+  console.log("--- DEBUG DE PRECIOS ---");
+  console.log("Precio Base (sin ajustar):", basePrice);
+  console.log("Precio Final (ajustado por getAjustedPrice):", finalPrice);
+  console.log("------------------------");
+  // ------------------------------------
+
   return (
     <div className="pt-20 sm:pt-24 pb-16 min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -202,15 +223,15 @@ export default function ProductPage(props: Props) {
               {product.on_sale && product.sale_price !== product.regular_price ? (
                 <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-3">
                   <span className="text-3xl sm:text-4xl font-extrabold text-red-600">
-                    <span className="text-green-600">$</span>{formatPrice(getAjustedPrice(product.sale_price))}
+                    <span className="text-green-600">$</span>{formatPriceWithDots(finalPrice)}
                   </span>
                   <span className="text-sm sm:text-base text-gray-500 line-through">
-                    <span className="text-gray-500">$</span>{formatPrice(getAjustedPrice(product.regular_price))}
+                    <span className="text-gray-500">$</span>{formatPriceWithDots(getAjustedPrice(product.regular_price))}
                   </span>
                 </div>
               ) : (
                 <span className="text-3xl sm:text-4xl font-extrabold text-gray-900">
-                  <span className="text-green-600">$</span>{formatPrice(getAjustedPrice(product.price || product.regular_price))}
+                  <span className="text-green-600">$</span>{formatPriceWithDots(finalPrice)}
                 </span>
               )}
             </div>
@@ -247,7 +268,15 @@ export default function ProductPage(props: Props) {
               onClick={() => {
                 console.log("--- DEBUG BOTÓN WHATSAPP ---");
                 console.log("Valor de 'userPhone' al hacer clic:", userPhone);
-                const message = `Hola! Me interesa el producto: ${product.name} - $${product.price || product.regular_price}`;
+
+                // --- CÁLCULO DEL PRECIO FINAL JUSTO AL HACER CLIC ---
+                const precioBaseParaMensaje = product.on_sale ? product.sale_price : (product.price || product.regular_price);
+                const precioFinalParaMensaje = getAjustedPrice(precioBaseParaMensaje);
+                const precioFormateadoParaMensaje = formatPriceWithDots(precioFinalParaMensaje);
+                console.log("Valor del precio (ajustado y formateado) que se pasa a la URL de WhatsApp:", `$${precioFormateadoParaMensaje}`);
+                // ----------------------------------------------------
+
+                const message = `Hola! Me interesa el producto: ${product.name} - $${precioFormateadoParaMensaje}`;
                 try {
                   window.open(`https://wa.me/${userPhone}?text=${encodeURIComponent(message)}`, '_blank');
                 } catch (error) {
