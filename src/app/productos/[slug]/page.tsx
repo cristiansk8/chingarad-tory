@@ -31,10 +31,21 @@ export default function ProductPage(props: Props) {
         const productData = await getProductBySlug(params.slug);
         setProduct(productData);
 
+        // Normalizar el email a minúsculas antes de enviarlo a la API.
+        const userEmail = process.env.NEXT_PUBLIC_userEmail || '';
+        console.log("--- INICIO DEBUG ---");
+        console.log("Email desde variable de entorno (NEXT_PUBLIC_userEmail):", userEmail);
+
         // Obtener el número de teléfono del usuario
-        const res = await fetch(`https://vendetiyo.vercel.app/api/user?email=${process.env.NEXT_PUBLIC_userEmail}`);
+        const res = await fetch(`https://vendetiyo.vercel.app/api/user?email=${userEmail.toLowerCase()}`);
+        console.log("URL de la API que se está llamando:", res.url);
+        console.log("Respuesta de la API de usuario:", res); // DEBUG: ¿Fue exitosa la petición? (status 200)
+
         const data = await res.json();
+        console.log("Datos recibidos de la API de usuario:", data); // DEBUG: ¿Qué contiene la respuesta JSON?
+
         if (data.user?.phone) {
+          console.log("Número de teléfono encontrado en la API:", data.user.phone); // DEBUG: Muestra el número original
           // SOLUCIÓN: Eliminar todos los espacios del número de teléfono.
           let finalPhone = data.user.phone.replace(/\s/g, '');
           // Asegurarse de que el número tenga el código de país de Colombia (57)
@@ -43,7 +54,10 @@ export default function ProductPage(props: Props) {
           }
           console.log("Número de WhatsApp final:", finalPhone); // Para depuración
           setUserPhone(finalPhone);
+        } else {
+          console.warn("La API no devolvió un número de teléfono para el usuario. Se usará el número por defecto."); // DEBUG: Aviso si no se encuentra el teléfono
         }
+        console.log("--- FIN DEBUG ---");
       } catch (error) {
         console.error('Error loading page data:', error);
       } finally {
@@ -231,14 +245,15 @@ export default function ProductPage(props: Props) {
             {/* WhatsApp Button */}
             <button
               onClick={() => {
-                console.log("--- DEBUG WHATSAPP (Página de Producto) ---");
-                console.log("Número de WhatsApp a utilizar:", userPhone);
+                console.log("--- DEBUG BOTÓN WHATSAPP ---");
+                console.log("Valor de 'userPhone' al hacer clic:", userPhone);
                 const message = `Hola! Me interesa el producto: ${product.name} - $${product.price || product.regular_price}`;
                 try {
                   window.open(`https://wa.me/${userPhone}?text=${encodeURIComponent(message)}`, '_blank');
                 } catch (error) {
                   console.error("Error al intentar abrir WhatsApp:", error);
                 }
+                console.log("-----------------------------");
               }}
               className="w-full bg-green-500 hover:bg-green-600 active:bg-green-700 text-white py-4 px-4 rounded-lg font-medium transition-all active:scale-95 flex items-center justify-center gap-3 text-base sm:text-lg touch-manipulation"
               aria-label="Consultar por WhatsApp"
